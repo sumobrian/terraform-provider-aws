@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/opensearchserverless"
 	awstypes "github.com/aws/aws-sdk-go-v2/service/opensearchserverless/types"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -30,6 +31,7 @@ import (
 	"github.com/hashicorp/terraform-provider-aws/internal/errs/fwdiag"
 	"github.com/hashicorp/terraform-provider-aws/internal/framework"
 	"github.com/hashicorp/terraform-provider-aws/internal/framework/flex"
+	fwtypes "github.com/hashicorp/terraform-provider-aws/internal/framework/types"
 	"github.com/hashicorp/terraform-provider-aws/internal/retry"
 	tftags "github.com/hashicorp/terraform-provider-aws/internal/tags"
 	"github.com/hashicorp/terraform-provider-aws/names"
@@ -52,18 +54,25 @@ func newCollectionResource(_ context.Context) (resource.ResourceWithConfigure, e
 
 type collectionResourceModel struct {
 	framework.WithRegionModel
-	ARN                types.String   `tfsdk:"arn"`
-	CollectionEndpoint types.String   `tfsdk:"collection_endpoint"`
-	DashboardEndpoint  types.String   `tfsdk:"dashboard_endpoint"`
-	Description        types.String   `tfsdk:"description"`
-	ID                 types.String   `tfsdk:"id"`
-	KmsKeyARN          types.String   `tfsdk:"kms_key_arn"`
-	Name               types.String   `tfsdk:"name"`
-	StandbyReplicas    types.String   `tfsdk:"standby_replicas"`
-	Tags               tftags.Map     `tfsdk:"tags"`
-	TagsAll            tftags.Map     `tfsdk:"tags_all"`
-	Timeouts           timeouts.Value `tfsdk:"timeouts"`
-	Type               types.String   `tfsdk:"type"`
+	ARN                 types.String                                           `tfsdk:"arn"`
+	CollectionEndpoint  types.String                                           `tfsdk:"collection_endpoint"`
+	CollectionGroupName types.String                                           `tfsdk:"collection_group_name"`
+	DashboardEndpoint   types.String                                           `tfsdk:"dashboard_endpoint"`
+	Description         types.String                                           `tfsdk:"description"`
+	EncryptionConfig    fwtypes.ListNestedObjectValueOf[encryptionConfigModel] `tfsdk:"encryption_config"`
+	ID                  types.String                                           `tfsdk:"id"`
+	KmsKeyARN           types.String                                           `tfsdk:"kms_key_arn"`
+	Name                types.String                                           `tfsdk:"name"`
+	StandbyReplicas     types.String                                           `tfsdk:"standby_replicas"`
+	Tags                tftags.Map                                             `tfsdk:"tags"`
+	TagsAll             tftags.Map                                             `tfsdk:"tags_all"`
+	Timeouts            timeouts.Value                                         `tfsdk:"timeouts"`
+	Type                types.String                                           `tfsdk:"type"`
+}
+
+type encryptionConfigModel struct {
+	AWSOwnedKey types.Bool   `tfsdk:"aws_owned_key"`
+	KMSKeyARN   types.String `tfsdk:"kms_key_arn"`
 }
 
 const (
@@ -85,6 +94,18 @@ func (r *collectionResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"collection_group_name": schema.StringAttribute{
+				Description: "Name of the collection group to associate with the collection.",
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(3, 32),
+					stringvalidator.RegexMatches(regexache.MustCompile(`^[a-z][a-z0-9-]{2,31}$`),
+						`must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens`),
 				},
 			},
 			"dashboard_endpoint": schema.StringAttribute{
@@ -149,6 +170,26 @@ func (r *collectionResource) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 		},
 		Blocks: map[string]schema.Block{
+			"encryption_config": schema.ListNestedBlock{
+				CustomType:  fwtypes.NewListNestedObjectTypeOf[encryptionConfigModel](ctx),
+				Description: "Encryption settings for the collection.",
+				Validators: []validator.List{
+					listvalidator.SizeAtMost(1),
+				},
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"aws_owned_key": schema.BoolAttribute{
+							Description: "Indicates whether to use an AWS-owned key for encryption. Defaults to `true` if not specified.",
+							Optional:    true,
+							Computed:    true,
+						},
+						names.AttrKMSKeyARN: schema.StringAttribute{
+							Description: "The ARN of the AWS KMS key used to encrypt the collection. Required when `aws_owned_key` is `false`.",
+							Optional:    true,
+						},
+					},
+				},
+			},
 			names.AttrTimeouts: timeouts.Block(ctx, timeouts.Opts{
 				Create: true,
 				Delete: true,

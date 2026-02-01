@@ -50,11 +50,18 @@ The following arguments are required:
 
 The following arguments are optional:
 
-* `region` - (Optional) Region where this resource will be [managed](https://docs.aws.amazon.com/general/latest/gr/rande.html#regional-endpoints). Defaults to the Region set in the [provider configuration](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#aws-configuration-reference).
+* `collection_group_name` - (Optional) Name of the collection group to associate with this collection. Must be between 3-32 characters, start with a lowercase letter, and contain only lowercase letters, numbers, and hyphens. Cannot be changed after creation.
 * `description` - (Optional) Description of the collection.
+* `encryption_config` - (Optional) Encryption settings for the collection. Cannot be changed after creation. See [encryption_config](#encryption_config) below.
+* `region` - (Optional) Region where this resource will be [managed](https://docs.aws.amazon.com/general/latest/gr/rande.html#regional-endpoints). Defaults to the Region set in the [provider configuration](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#aws-configuration-reference).
 * `standby_replicas` - (Optional) Indicates whether standby replicas should be used for a collection. One of `ENABLED` or `DISABLED`. Defaults to `ENABLED`.
 * `tags` - (Optional) A map of tags to assign to the collection. If configured with a provider [`default_tags` configuration block](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#default_tags-configuration-block) present, tags with matching keys will overwrite those defined at the provider-level.
 * `type` - (Optional) Type of collection. One of `SEARCH`, `TIMESERIES`, or `VECTORSEARCH`. Defaults to `TIMESERIES`.
+
+### encryption_config
+
+* `aws_owned_key` - (Optional) Indicates whether to use an AWS-owned key for encryption. Defaults to `true` if not specified.
+* `kms_key_arn` - (Optional) The ARN of the AWS KMS key used to encrypt the collection. Required when `aws_owned_key` is `false`.
 
 ## Attribute Reference
 

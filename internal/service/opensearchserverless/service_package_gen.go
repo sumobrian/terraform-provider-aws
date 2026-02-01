@@ -40,6 +40,15 @@ func (p *servicePackage) FrameworkDataSources(ctx context.Context) []*inttypes.S
 			Region: unique.Make(inttypes.ResourceRegionDefault()),
 		},
 		{
+			Factory:  newCollectionGroupDataSource,
+			TypeName: "aws_opensearchserverless_collection_group",
+			Name:     "Collection Group",
+			Tags: unique.Make(inttypes.ServicePackageResourceTags{
+				IdentifierAttribute: names.AttrARN,
+			}),
+			Region: unique.Make(inttypes.ResourceRegionDefault()),
+		},
+		{
 			Factory:  newLifecyclePolicyDataSource,
 			TypeName: "aws_opensearchserverless_lifecycle_policy",
 			Name:     "Lifecycle Policy",
@@ -74,6 +83,15 @@ func (p *servicePackage) FrameworkResources(ctx context.Context) []*inttypes.Ser
 			Import: inttypes.FrameworkImport{
 				WrappedImport: true,
 			},
+		},
+		{
+			Factory:  newCollectionGroupResource,
+			TypeName: "aws_opensearchserverless_collection_group",
+			Name:     "Collection Group",
+			Tags: unique.Make(inttypes.ServicePackageResourceTags{
+				IdentifierAttribute: names.AttrARN,
+			}),
+			Region: unique.Make(inttypes.ResourceRegionDefault()),
 		},
 		{
 			Factory:  newLifecyclePolicyResource,
